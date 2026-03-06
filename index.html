@@ -16,8 +16,10 @@
       font-family: 'Share Tech Mono', monospace;
       height: 100vh;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
+      gap: 18px;
       overflow: hidden;
     }
 
@@ -236,11 +238,32 @@
     }
 
     #clear-btn:hover { color: #ff3333; }
+
+    #banner {
+      position: relative;
+      z-index: 1;
+      font-size: clamp(1.4rem, 4vw, 2.2rem);
+      letter-spacing: 0.35em;
+      color: #00d4ff;
+      text-shadow: 0 0 10px #00d4ff, 0 0 30px rgba(0, 212, 255, 0.4);
+      text-transform: uppercase;
+      animation: flicker 6s infinite;
+    }
+
+    @keyframes flicker {
+      0%, 95%, 100% { opacity: 1; }
+      96%            { opacity: 0.7; }
+      97%            { opacity: 1; }
+      98%            { opacity: 0.5; }
+      99%            { opacity: 1; }
+    }
   </style>
 </head>
 <body>
 
 <canvas id="matrix-rain"></canvas>
+
+<div id="banner">Chatius Maximus</div>
 
 <div id="chat-container">
   <div id="chat-header">
