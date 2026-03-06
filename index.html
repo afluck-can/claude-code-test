@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MATRIX//CHAT</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0d0d0d;
+      color: #00d4ff;
+      font-family: 'Share Tech Mono', monospace;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    #matrix-rain {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+      opacity: 0.18;
+    }
+
+    #chat-container {
+      position: relative;
+      z-index: 1;
+      width: min(720px, 95vw);
+      height: min(600px, 90vh);
+      display: flex;
+      flex-direction: column;
+      background: rgba(0, 0, 0, 0.78);
+      border: 1px solid #00d4ff;
+      box-shadow: 0 0 24px rgba(0, 212, 255, 0.25), inset 0 0 60px rgba(0, 212, 255, 0.03);
+    }
+
+    #chat-header {
+      padding: 10px 16px;
+      border-bottom: 1px solid #00d4ff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    #chat-header .title {
+      font-size: 0.85rem;
+      letter-spacing: 0.2em;
+      color: #00d4ff;
+      text-shadow: 0 0 8px #00d4ff;
+    }
+
+    #chat-header .meta {
+      font-size: 0.65rem;
+      color: #005577;
+      letter-spacing: 0.1em;
+    }
+
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      scroll-behavior: smooth;
+    }
+
+    #messages::-webkit-scrollbar { width: 4px; }
+    #messages::-webkit-scrollbar-track { background: transparent; }
+    #messages::-webkit-scrollbar-thumb { background: #003344; border-radius: 2px; }
+
+    .msg {
+      max-width: 78%;
+      font-size: 0.82rem;
+      line-height: 1.55;
+      padding: 8px 12px;
+      border-radius: 2px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .msg.user {
+      align-self: flex-end;
+      color: #00d4ff;
+      border: 1px solid #00d4ff;
+      background: rgba(0, 212, 255, 0.05);
+      text-shadow: 0 0 6px rgba(0, 212, 255, 0.5);
+    }
+
+    .msg.user::before {
+      content: '> ';
+      color: #00d4ff;
+    }
+
+    .msg.bot {
+      align-self: flex-start;
+      color: #00aacc;
+      border: 1px solid #004d66;
+      background: rgba(0, 170, 204, 0.04);
+    }
+
+    .msg.bot::before {
+      content: '# ';
+      color: #004d66;
+    }
+
+    .msg.error {
+      align-self: flex-start;
+      color: #ff3333;
+      border: 1px solid #660000;
+      background: rgba(255, 0, 0, 0.05);
+      font-size: 0.75rem;
+    }
+
+    #typing-indicator {
+      padding: 4px 16px 8px;
+      font-size: 0.75rem;
+      color: #004d66;
+      letter-spacing: 0.15em;
+      min-height: 24px;
+      flex-shrink: 0;
+    }
+
+    #typing-indicator .dots {
+      display: inline-block;
+      animation: blink 1s steps(3, end) infinite;
+    }
+
+    @keyframes blink {
+      0%   { content: '.'; }
+      33%  { content: '..'; }
+      66%  { content: '...'; }
+      100% { content: ''; }
+    }
+
+    /* Fallback approach for animated dots */
+    #typing-indicator span { visibility: hidden; }
+    #typing-indicator.active span { visibility: visible; }
+    #typing-indicator.active .d1 { animation: dot 1s infinite 0s; }
+    #typing-indicator.active .d2 { animation: dot 1s infinite 0.2s; }
+    #typing-indicator.active .d3 { animation: dot 1s infinite 0.4s; }
+
+    @keyframes dot {
+      0%, 60%, 100% { opacity: 0; }
+      30% { opacity: 1; }
+    }
+
+    #input-area {
+      display: flex;
+      border-top: 1px solid #00d4ff;
+      flex-shrink: 0;
+    }
+
+    #input-area .prompt {
+      padding: 12px 10px 12px 16px;
+      color: #00d4ff;
+      font-size: 0.85rem;
+      font-family: inherit;
+      user-select: none;
+    }
+
+    #user-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #00d4ff;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.82rem;
+      padding: 12px 0;
+      resize: none;
+      caret-color: #00d4ff;
+      line-height: 1.4;
+      max-height: 120px;
+      overflow-y: auto;
+    }
+
+    #user-input::placeholder { color: #003344; }
+
+    #user-input::-webkit-scrollbar { width: 4px; }
+    #user-input::-webkit-scrollbar-thumb { background: #003344; }
+
+    #send-btn {
+      background: transparent;
+      border: none;
+      border-left: 1px solid #00d4ff;
+      color: #00d4ff;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      padding: 0 20px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+    }
+
+    #send-btn:hover {
+      background: rgba(0, 212, 255, 0.12);
+      box-shadow: 0 0 10px rgba(0, 212, 255, 0.3) inset;
+    }
+
+    #send-btn:active {
+      background: rgba(0, 212, 255, 0.22);
+    }
+
+    #send-btn:disabled {
+      color: #003344;
+      border-color: #003344;
+      cursor: not-allowed;
+    }
+
+    #clear-btn {
+      background: transparent;
+      border: none;
+      border-left: 1px solid #003344;
+      color: #003344;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      padding: 0 12px;
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+
+    #clear-btn:hover { color: #ff3333; }
+  </style>
+</head>
+<body>
+
+<canvas id="matrix-rain"></canvas>
+
+<div id="chat-container">
+  <div id="chat-header">
+    <span class="title">MATRIX // CHAT TERMINAL</span>
+    <span class="meta" id="session-label">SESSION: --------</span>
+  </div>
+
+  <div id="messages"></div>
+
+  <div id="typing-indicator">
+    <span class="d1">.</span><span class="d2">.</span><span class="d3">.</span>
+  </div>
+
+  <div id="input-area">
+    <span class="prompt">&gt;_</span>
+    <textarea
+      id="user-input"
+      rows="1"
+      placeholder="Enter message..."
+      autocomplete="off"
+      spellcheck="false"
+    ></textarea>
+    <button id="clear-btn" title="Clear history">CLR</button>
+    <button id="send-btn">SEND</button>
+  </div>
+</div>
+
+<script>
+  // ─── CONFIG ────────────────────────────────────────────────────────────────
+  const CONFIG = {
+    webhookUrl: '/api/chat',
+    requestField: 'chatInput',                      // query param name for user message
+    responseFields: ['output', 'text', 'message'],  // tried in order on response JSON
+    sessionId: crypto.randomUUID(),
+    storageKey: 'matrix_chat_history',
+  };
+
+  // ─── MATRIX RAIN ──────────────────────────────────────────────────────────
+  (function initRain() {
+    const canvas = document.getElementById('matrix-rain');
+    const ctx = canvas.getContext('2d');
+    const chars = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲンABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&';
+    let cols, drops;
+
+    function resize() {
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+      cols  = Math.floor(canvas.width / 16);
+      drops = Array.from({ length: cols }, () => Math.random() * -50);
+    }
+
+    function draw() {
+      ctx.fillStyle = 'rgba(13, 13, 13, 0.05)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#00d4ff';
+      ctx.font = '14px "Share Tech Mono", monospace';
+
+      for (let i = 0; i < drops.length; i++) {
+        const char = chars[Math.floor(Math.random() * chars.length)];
+        ctx.fillText(char, i * 16, drops[i] * 16);
+        if (drops[i] * 16 > canvas.height && Math.random() > 0.975) {
+          drops[i] = 0;
+        }
+        drops[i]++;
+      }
+    }
+
+    resize();
+    window.addEventListener('resize', resize);
+    setInterval(draw, 50);
+  })();
+
+  // ─── AUDIO ────────────────────────────────────────────────────────────────
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  let audioCtx = null;
+
+  function ensureAudio() {
+    if (!audioCtx) audioCtx = new AudioCtx();
+  }
+
+  function playClick() {
+    try {
+      ensureAudio();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.06);
+      osc.start(audioCtx.currentTime);
+      osc.stop(audioCtx.currentTime + 0.06);
+    } catch (_) {}
+  }
+
+  function playBeep() {
+    try {
+      ensureAudio();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(520, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(660, audioCtx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.18);
+      osc.start(audioCtx.currentTime);
+      osc.stop(audioCtx.currentTime + 0.18);
+    } catch (_) {}
+  }
+
+  // ─── STORAGE ──────────────────────────────────────────────────────────────
+  function loadHistory() {
+    try {
+      return JSON.parse(localStorage.getItem(CONFIG.storageKey)) || [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function saveHistory(history) {
+    try {
+      localStorage.setItem(CONFIG.storageKey, JSON.stringify(history));
+    } catch (_) {}
+  }
+
+  // ─── DOM REFS ─────────────────────────────────────────────────────────────
+  const messagesEl      = document.getElementById('messages');
+  const inputEl         = document.getElementById('user-input');
+  const sendBtn         = document.getElementById('send-btn');
+  const clearBtn        = document.getElementById('clear-btn');
+  const typingIndicator = document.getElementById('typing-indicator');
+  const sessionLabel    = document.getElementById('session-label');
+
+  sessionLabel.textContent = 'SESSION: ' + CONFIG.sessionId.slice(0, 8).toUpperCase();
+
+  // ─── CHAT LOGIC ───────────────────────────────────────────────────────────
+  let history = loadHistory();
+
+  function appendMessage(role, text, save = true) {
+    const div = document.createElement('div');
+    div.classList.add('msg', role);
+    div.textContent = text;
+    messagesEl.appendChild(div);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+
+    if (save) {
+      history.push({ role, text });
+      saveHistory(history);
+    }
+    return div;
+  }
+
+  function showTyping(visible) {
+    typingIndicator.classList.toggle('active', visible);
+  }
+
+  function setInputLocked(locked) {
+    inputEl.disabled = locked;
+    sendBtn.disabled = locked;
+  }
+
+  async function callWebhook(message) {
+    const params = new URLSearchParams({
+      [CONFIG.requestField]: message,
+      sessionId: CONFIG.sessionId,
+    });
+
+    const res = await fetch(`${CONFIG.webhookUrl}?${params}`, {
+      method: 'GET',
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+
+    const data = await res.json();
+    const payload = Array.isArray(data) ? data[0] : data;
+
+    for (const field of CONFIG.responseFields) {
+      if (payload && typeof payload[field] === 'string') {
+        return payload[field];
+      }
+    }
+
+    return JSON.stringify(payload);
+  }
+
+  async function sendMessage() {
+    const text = inputEl.value.trim();
+    if (!text) return;
+    if (!CONFIG.webhookUrl) {
+      appendMessage('error', 'ERROR: webhookUrl not configured. Edit CONFIG.webhookUrl in index.html.', false);
+      return;
+    }
+
+    playClick();
+    inputEl.value = '';
+    inputEl.style.height = 'auto';
+    appendMessage('user', text);
+
+    setInputLocked(true);
+    showTyping(true);
+
+    try {
+      const reply = await callWebhook(text);
+      showTyping(false);
+      appendMessage('bot', reply);
+      playBeep();
+    } catch (err) {
+      showTyping(false);
+      appendMessage('error', 'ERROR: ' + err.message, false);
+    } finally {
+      setInputLocked(false);
+      inputEl.focus();
+    }
+  }
+
+  // Restore history on load
+  history.forEach(({ role, text }) => appendMessage(role, text, false));
+
+  // Auto-resize textarea
+  inputEl.addEventListener('input', () => {
+    inputEl.style.height = 'auto';
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+  });
+
+  // ─── EVENT LISTENERS ──────────────────────────────────────────────────────
+  sendBtn.addEventListener('click', sendMessage);
+
+  inputEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  clearBtn.addEventListener('click', () => {
+    history = [];
+    saveHistory(history);
+    messagesEl.innerHTML = '';
+  });
+
+  inputEl.focus();
+</script>
+</body>
+</html>
